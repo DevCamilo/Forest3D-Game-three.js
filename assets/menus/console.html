@@ -1,0 +1,171 @@
+<style scoped>
+	.cmd_console {
+		border: 2px solid rgb(32, 32, 26);
+		background-color: rgb(64, 64, 51);
+		width: calc(100% - 18px);
+		height: 25px;
+		overflow: hidden;
+		white-space: nowrap;
+		display: none;
+	}
+
+	.console-title {
+		font-family: 'Courier New';
+		font-size: 10pt;
+		font-family: 'Courier New';
+		color: rgb(255, 255, 0);
+		padding-left: 7px;
+		padding-right: 3px;
+		max-width: 0;
+	}
+
+	#console-field {
+		display: none;
+		font-family: 'Courier New';
+		font-size: 10pt;
+		text-align: left;
+		color: white;
+		background-color: rgb(64, 64, 51);
+		border: 0;
+		width: 100%;
+		outline: none;
+		display: inline;
+		-webkit-font-smoothing: antialiased;
+		-webkit-touch-callout: none;
+		-webkit-user-select: none;
+		-khtml-user-select: none;
+		-moz-user-select: none;
+		-ms-user-select: none;
+		user-select: none;
+	}
+
+	#menu_console {
+		display: none;
+		z-index: 10;
+		margin-top: 9px;
+		margin-left: 9px;
+	}
+</style>
+
+<div class="cmd_console">
+	<span class="console-title">Console></span>
+	<input type="text" id="console-field" value="test">
+</div>
+
+<script>
+	(function() {
+		// Store a reference to the menu.
+		// ENGINE.menu.self won't be accessible anymore, once the menu is loaded
+		var self = ENGINE.menu.self;
+		self.popup = true;
+
+		var scrollPos = 0;
+		var scrollHistory = [];
+
+		var inputField = self.select("#console-field");
+
+		self.onOpen = function() {
+			// Do something when the menu opens
+			//ENGINE.console.log("Developer console opened");
+			inputField.val("");
+
+			scrollPos = scrollHistory.length;
+		};
+
+		self.onOpened = function() {
+			inputField.focus();
+		};
+
+		self.onClose = function() {
+			// Do something when the menu closes
+			//ENGINE.console.log("Developer console closed");
+		};
+
+		function selectPosition(elem, pos) {
+			if (elem.createTextRange) {
+				var textRange = el.createTextRange();
+				textRange.move("character", pos);
+				textRange.select();
+			} else if (elem.selectionStart) {
+				elem.focus();
+				elem.setSelectionRange(pos, pos);
+			}
+		}
+
+		function moveCarret() {
+			inputField.focus();
+			selectPosition(inputField[0], inputField.val().length);
+		}
+
+		function scrollBack() {
+			scrollPos--;
+			if (scrollPos < 0) {
+				scrollPos = 0;
+			}
+
+			if (scrollPos < scrollHistory.length && scrollHistory.length > 0) {
+				inputField.val(scrollHistory[scrollPos]);
+			}
+
+			moveCarret();
+		}
+
+		function scrollForth() {
+			scrollPos++;
+			if (scrollPos >= scrollHistory.length) {
+				scrollPos = scrollHistory.length;
+				inputField.val("");
+			} else {
+				inputField.val(scrollHistory[scrollPos]);
+			}
+
+			moveCarret();
+		}
+
+		function scrollPush(data) {
+			// Remove if already exists
+			var i = scrollHistory.indexOf(data);
+			if (i != -1) scrollHistory.splice(i, 1);
+
+			// Push data
+			scrollHistory.push(data);
+		}
+
+		ENGINE.controls.assignSinglePersistent(9, function(event) {
+			if (self.isOpen()) {
+				event.preventDefault();
+
+				if (inputField.val().trim()[0] == "\\") {
+
+					inputField.val("/" + inputField.val().trim().substring(1));
+				} else if (inputField.val().trim()[0] != "/") {
+
+					inputField.val("/" + inputField.val().trim());
+				} else {
+
+					inputField.val(inputField.val().trim());
+				}
+			}
+		});
+
+		ENGINE.controls.assignSinglePersistent(ENGINE.controls.key.DOWN, function() {
+			if (self.isOpen()) {
+				scrollForth();
+			}
+		});
+		ENGINE.controls.assignSinglePersistent(ENGINE.controls.key.UP, function() {
+			if (self.isOpen()) {
+				scrollBack();
+			}
+		});
+
+		inputField.keyup(function(e) {
+			// On Enter
+			if (e.keyCode === 13) {
+				scrollPush(inputField.val());
+				ENGINE.command.execute(inputField.val());
+				self.dismiss();
+			}
+		});
+	})();
+</script>
